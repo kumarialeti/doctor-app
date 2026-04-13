@@ -12,7 +12,11 @@ import { app, server } from "./socket/socket.js";
 
 dotenv.config();
 
-app.use(cors());
+app.use(cors({
+  origin: ["https://doc-booking-online.vercel.app", "http://localhost:5173"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
