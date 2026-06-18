@@ -97,6 +97,76 @@ const Appointments = () => {
     }
   };
 
+  const handlePayment = async (appointment) => {
+    try {
+      const { data } = await axios.post(
+        import.meta.env.VITE_API_URL + "/api/payment/create-order",
+        { appointmentId: appointment._id },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!data.success) {
+        return message.error(data.message || "Failed to create payment order");
+      }
+
+      const order = data.order;
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_yourKeyHere",
+        amount: order.amount,
+        currency: order.currency,
+        name: "MediCarePro",
+        description: `Consultation fee for Dr. ${appointment.doctorInfo?.fullname}`,
+        order_id: order.id,
+        handler: async (response) => {
+          try {
+            const verifyRes = await axios.post(
+              import.meta.env.VITE_API_URL + "/api/payment/verify-payment",
+              {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                appointmentId: appointment._id,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+
+            if (verifyRes.data.success) {
+              message.success("Payment Successful!");
+              getAppointments();
+            } else {
+              message.error("Payment verification failed.");
+            }
+          } catch (err) {
+            console.error(err);
+            message.error("Error verifying payment.");
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+        },
+        theme: {
+          color: "#2563eb",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error(error);
+      message.error(error.response?.data?.message || "Failed to initiate payment");
+    }
+  };
+
   const startVideoCall = (record) => {
     setActiveRoomId(`medicare-consult-${record._id}`);
     setIsVideoCallOpen(true);
@@ -125,6 +195,25 @@ const Appointments = () => {
         <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${text === 'completed' ? 'bg-green-100 text-green-700' : text === 'cancelled' ? 'bg-slate-100 text-slate-600' : text === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
           {text}
         </span>
+      )
+    },
+    {
+      title: "Payment",
+      dataIndex: "paymentStatus",
+      render: (text, record) => (
+        <div className="flex flex-col gap-1 items-start">
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold capitalize ${text === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            {text || 'unpaid'}
+          </span>
+          {(!text || text === 'unpaid') && record.status !== 'cancelled' && record.status !== 'rejected' && (
+            <button
+              onClick={() => handlePayment(record)}
+              className="mt-1 bg-blue-600 text-white px-2 py-1 text-[11px] font-semibold rounded hover:bg-blue-700 border-none cursor-pointer"
+            >
+              Pay Now (${record.doctorInfo?.fees || 0})
+            </button>
+          )}
+        </div>
       )
     },
     {

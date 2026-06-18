@@ -11,7 +11,10 @@ const appointmentSchema = new mongoose.Schema(
     document: { type: String, default: "" },
     status: { type: String, default: "pending" },
     notes: { type: String, default: "" },
-    prescription: { type: String, default: "" }
+    prescription: { type: String, default: "" },
+    paymentStatus: { type: String, default: "unpaid" },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String }
   },
   { timestamps: true }
 );
