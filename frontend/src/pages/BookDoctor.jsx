@@ -140,7 +140,7 @@ const BookDoctor = () => {
               className="w-full h-10"
               onChange={(value) => {
                 setIsAvailable(false);
-                setDate(moment(value.$d).format("DD-MM-YYYY"));
+                setDate(value ? moment(value.$d || value).format("DD-MM-YYYY") : null);
               }}
             />
             <TimePicker
@@ -148,7 +148,7 @@ const BookDoctor = () => {
               className="w-full h-10"
               onChange={(value) => {
                 setIsAvailable(false);
-                setTime(moment(value.$d).format("HH:mm"));
+                setTime(value ? moment(value.$d || value).format("HH:mm") : null);
               }}
             />
             <div>
