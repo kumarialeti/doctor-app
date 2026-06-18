@@ -82,6 +82,10 @@ export const updateStatus = async (req, res) => {
     const { appointmentsId, status } = req.body;
     const appointments = await Appointment.findByIdAndUpdate(appointmentsId, { status }, { new: true });
     
+    if (!appointments) {
+      return res.status(404).send({ success: false, message: "Appointment not found" });
+    }
+
     // Notify user
     const user = await User.findOne({ _id: appointments.userId });
     if(user) {
@@ -95,11 +99,11 @@ export const updateStatus = async (req, res) => {
       await user.save();
       
       // Feature 3
-      await sendEmail({
+      sendEmail({
         email: user.email,
         subject: `Your Appointment was ${status}`,
         message: `Hello ${user.name},\n\nYour appointment has been ${status}. Please log in to view the details.\n\nBest,\nMediCarePro`
-      });
+      }).catch(err => console.error(err));
     }
     res.status(200).send({
       success: true,
@@ -107,7 +111,7 @@ export const updateStatus = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, error, message: "Error in Update Status" });
+    res.status(500).send({ success: false, error: error.message || error, message: "Error in Update Status" });
   }
 };
 
@@ -120,6 +124,10 @@ export const updateConsultation = async (req, res) => {
       { new: true }
     );
     
+    if (!appointment) {
+      return res.status(404).send({ success: false, message: "Appointment not found" });
+    }
+
     // Notify user
     const user = await User.findOne({ _id: appointment.userId });
     if (user) {
@@ -133,11 +141,11 @@ export const updateConsultation = async (req, res) => {
       await user.save();
       
       // Feature 3
-      await sendEmail({
+      sendEmail({
         email: user.email,
         subject: `Consultation Completed`,
         message: `Hello ${user.name},\n\nYour consultation is complete. Prescription and notes have been added to your profile.\n\nBest,\nMediCarePro`
-      });
+      }).catch(err => console.error(err));
     }
     
     res.status(200).send({
@@ -146,6 +154,6 @@ export const updateConsultation = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, error, message: "Error in Completing Consultation" });
+    res.status(500).send({ success: false, error: error.message || error, message: "Error in Completing Consultation" });
   }
 };

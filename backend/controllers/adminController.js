@@ -84,11 +84,11 @@ export const changeAccountStatus = async (req, res) => {
       await user.save();
       
       // Feature 3: Send Email
-      await sendEmail({
+      sendEmail({
         email: user.email,
         subject: `Your Doctor Account Request is ${status}`,
         message: `Hello ${user.name},\n\nYour recent application to be a doctor on MediCarePro has been ${status}.\n\nLog in to your account for more details.\n\nThanks,\nMediCarePro Team`
-      });
+      }).catch(err => console.error(err));
     }
     res.status(200).send({
       success: true,
@@ -97,7 +97,7 @@ export const changeAccountStatus = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, message: "Error in Account Status", error });
+    res.status(500).send({ success: false, message: "Error in Account Status", error: error.message || error });
   }
 };
 
