@@ -164,19 +164,19 @@ export const bookAppointment = async (req, res) => {
       await user.save();
 
       // Send Email to Doctor
-      await sendEmail({
+      sendEmail({
         email: doctorInfo.email,
         subject: "New Appointment Request",
         message: `Hello Dr. ${doctorInfo.fullname},\n\nYou have received a new appointment request from ${userInfo.name} for ${req.body.date} at ${req.body.time}.\n\nPlease log in to accept or decline the request.\n\nBest,\nMediCarePro`
-      });
+      }).catch(err => console.error("Error sending email to doctor:", err));
     }
 
     // Send Email to Patient
-    await sendEmail({
+    sendEmail({
       email: userInfo.email,
       subject: "Appointment Booking Request Received",
       message: `Hello ${userInfo.name},\n\nYour appointment booking request with Dr. ${doctorInfo.fullname} for ${req.body.date} at ${req.body.time} has been received and is pending doctor confirmation.\n\nYou can complete the payment under 'My Appointments' page.\n\nBest,\nMediCarePro`
-    });
+    }).catch(err => console.error("Error sending email to patient:", err));
     
     res.status(200).send({ success: true, message: "Appointment Booked successfully" });
   } catch (error) {
