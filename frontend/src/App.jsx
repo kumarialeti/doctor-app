@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Chat from "./pages/Chat";
 import Profile from "./pages/doctor/Profile";
 import Settings from "./pages/Settings";
+import AiAssistant from "./pages/AiAssistant";
 import { UserContext } from "./components/UserContext";
 import { useContext } from "react";
 import Layout from "./components/Layout";
@@ -76,6 +77,12 @@ function App() {
         <Route path="/doctor-dashboard" element={
           <ProtectedRoute>
             <Layout><DoctorDashboard /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/ai-assistant" element={
+          <ProtectedRoute>
+            <Layout><AiAssistant /></Layout>
           </ProtectedRoute>
         } />
         

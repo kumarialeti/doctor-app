@@ -18,6 +18,7 @@ const Layout = ({ children }) => {
   const userMenu = [
     { name: "Dashboard", path: "/patient-dashboard", icon: "fa-solid fa-house-medical" },
     { name: "Find Doctors", path: "/dashboard", icon: "fa-solid fa-user-doctor" },
+    { name: "AI Health Assistant", path: "/ai-assistant", icon: "fa-solid fa-wand-magic-sparkles" },
     { name: t("Appointments"), path: "/appointments", icon: "fa-regular fa-calendar-check" },
     { name: t("Messages"), path: "/chat", icon: "fa-regular fa-comment-dots" },
     { name: t("Apply doctor"), path: "/apply-doctor", icon: "fa-solid fa-notes-medical" },

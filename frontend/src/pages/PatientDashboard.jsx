@@ -7,6 +7,7 @@ import moment from "moment";
 import {
   CalendarDays, Clock, Stethoscope, ArrowRight,
   CheckCircle2, AlertCircle, Search, HeartPulse, Activity,
+  Sparkles
 } from "lucide-react";
 
 const PatientDashboard = () => {
@@ -42,6 +43,7 @@ const PatientDashboard = () => {
   ];
 
   const quickActions = [
+    { label: "AI Symptom Checker", icon: Sparkles, color: "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700", path: "/ai-assistant" },
     { label: "Find a Doctor", icon: Search, color: "bg-indigo-600 hover:bg-indigo-700", path: "/dashboard" },
     { label: "My Appointments", icon: CalendarDays, color: "bg-blue-500 hover:bg-blue-600", path: "/appointments" },
     { label: "Apply as Doctor", icon: Stethoscope, color: "bg-emerald-600 hover:bg-emerald-700", path: "/apply-doctor" },
