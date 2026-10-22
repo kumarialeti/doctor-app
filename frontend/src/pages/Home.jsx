@@ -32,7 +32,11 @@ const Home = () => {
   }, []);
 
   if (user?.isAdmin) {
-    return <Navigate to="/admin" />;
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (user?.isDoctor) {
+    return <Navigate to="/doctor-dashboard" replace />;
   }
 
   // Animation variants

@@ -12,7 +12,14 @@ const Login = () => {
       if (res.data.success) {
         localStorage.setItem("token", res.data.token);
         message.success("Login Success");
-        navigate("/dashboard");
+        const loggedInUser = res.data.user;
+        if (loggedInUser?.isAdmin) {
+          navigate("/admin");
+        } else if (loggedInUser?.isDoctor) {
+          navigate("/doctor-dashboard");
+        } else {
+          navigate("/patient-dashboard");
+        }
         window.location.reload();
       } else {
         message.error(res.data.message);

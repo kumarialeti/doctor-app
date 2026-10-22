@@ -23,6 +23,13 @@ import { UserContext } from "./components/UserContext";
 import { useContext } from "react";
 import Layout from "./components/Layout";
 
+const DashboardRouteHandler = () => {
+  const { user } = useContext(UserContext);
+  if (user?.isAdmin) return <Navigate to="/admin" replace />;
+  if (user?.isDoctor) return <Navigate to="/doctor-dashboard" replace />;
+  return <Layout><Home /></Layout>;
+};
+
 function App() {
   const { user } = useContext(UserContext);
 
@@ -56,7 +63,7 @@ function App() {
         {/* Protected Dashboard Routes Wrapped in Layout */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <Layout><Home /></Layout>
+            <DashboardRouteHandler />
           </ProtectedRoute>
         } />
 
