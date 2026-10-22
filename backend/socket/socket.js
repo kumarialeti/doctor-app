@@ -30,6 +30,26 @@ io.on("connection", (socket) => {
   // send online users via socket
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+  // Doctor initiates a video call to a specific patient
+  socket.on("video-call-invite", ({ toUserId, fromDoctorName, fromDoctorId, roomId }) => {
+    const receiverSocketId = userSocketMap[toUserId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("incoming-video-call", {
+        fromDoctorName,
+        fromDoctorId,
+        roomId,
+      });
+    }
+  });
+
+  // Patient declines the call — notify the doctor
+  socket.on("video-call-declined", ({ toDoctorId }) => {
+    const doctorSocketId = userSocketMap[toDoctorId];
+    if (doctorSocketId) {
+      io.to(doctorSocketId).emit("call-was-declined");
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("user disconnected", socket.id);
     delete userSocketMap[userId];
@@ -38,3 +58,4 @@ io.on("connection", (socket) => {
 });
 
 export { app, io, server };
+

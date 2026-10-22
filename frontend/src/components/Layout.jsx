@@ -16,6 +16,8 @@ const Layout = ({ children }) => {
   };
 
   const userMenu = [
+    { name: "Dashboard", path: "/patient-dashboard", icon: "fa-solid fa-house-medical" },
+    { name: "Find Doctors", path: "/dashboard", icon: "fa-solid fa-user-doctor" },
     { name: t("Appointments"), path: "/appointments", icon: "fa-regular fa-calendar-check" },
     { name: t("Messages"), path: "/chat", icon: "fa-regular fa-comment-dots" },
     { name: t("Apply doctor"), path: "/apply-doctor", icon: "fa-solid fa-notes-medical" },
@@ -31,6 +33,7 @@ const Layout = ({ children }) => {
   ];
 
   const doctorMenu = [
+    { name: "Dashboard", path: "/doctor-dashboard", icon: "fa-solid fa-gauge-high" },
     { name: t("Appointments"), path: "/doctor-appointments", icon: "fa-regular fa-calendar-check" },
     { name: t("Messages"), path: "/chat", icon: "fa-regular fa-comment-dots" },
     { name: t("Profile"), path: `/doctor/profile/${user?._id}`, icon: "fa-solid fa-user" },
@@ -61,13 +64,14 @@ const Layout = ({ children }) => {
              initial={{ x: -20, opacity: 0 }}
              animate={{ x: 0, opacity: 1 }}
              transition={{ delay: 0.2 }}
-             className="px-8 mb-12"
+             onClick={() => navigate(user?.isAdmin ? "/admin" : user?.isDoctor ? "/doctor-dashboard" : "/patient-dashboard")}
+             className="px-8 mb-12 cursor-pointer hover:opacity-90 transition-opacity"
           >
             <h1 className="text-xl font-black tracking-tight text-white m-0">
               {user?.isAdmin ? t("AdminConsole") : t("MediCarePro")}
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-1">
-              {user?.isAdmin ? t("System Management") : t("Patient Dashboard")}
+              {user?.isAdmin ? t("System Management") : user?.isDoctor ? "Doctor Console" : t("Patient Dashboard")}
             </p>
           </motion.div>
           

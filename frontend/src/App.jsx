@@ -6,6 +6,8 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
+import PatientDashboard from "./pages/PatientDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminAppointments from "./pages/AdminAppointments";
 import AdminUsers from "./pages/AdminUsers";
 import AdminDoctors from "./pages/AdminDoctors";
@@ -55,6 +57,18 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Layout><Home /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/patient-dashboard" element={
+          <ProtectedRoute>
+            <Layout><PatientDashboard /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/doctor-dashboard" element={
+          <ProtectedRoute>
+            <Layout><DoctorDashboard /></Layout>
           </ProtectedRoute>
         } />
         

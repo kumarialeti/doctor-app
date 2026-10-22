@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Table, message, Modal, Input, Tabs, Calendar as AntCalendar, Badge } from "antd";
 import moment from "moment";
 import { JitsiMeeting } from "@jitsi/react-sdk";
 import { UserContext } from "../components/UserContext";
+import { io } from "socket.io-client";
 
 const { TextArea } = Input;
 
@@ -20,6 +21,21 @@ const DoctorAppointments = () => {
   // Telemedicine States
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
+  const socketRef = useRef(null);
+
+  // Initialize Socket for call signalling
+  useEffect(() => {
+    if (user?._id) {
+      const sock = io(import.meta.env.VITE_API_URL, { query: { userId: user._id } });
+      socketRef.current = sock;
+
+      sock.on("call-was-declined", () => {
+        message.warning("Patient declined the video call.");
+      });
+
+      return () => sock.close();
+    }
+  }, [user?._id]);
 
   const getAppointments = async () => {
     try {
@@ -95,8 +111,19 @@ const DoctorAppointments = () => {
   };
 
   const startVideoCall = (record) => {
-    setActiveRoomId(`medicare-consult-${record._id}`);
+    const roomId = `medicare-consult-${record._id}`;
+    setActiveRoomId(roomId);
     setIsVideoCallOpen(true);
+
+    // Notify patient via socket
+    if (socketRef.current && record.userId) {
+      socketRef.current.emit("video-call-invite", {
+        toUserId: record.userId,
+        fromDoctorName: `Dr. ${user?.name || "Doctor"}`,
+        fromDoctorId: user?._id,
+        roomId,
+      });
+    }
   };
 
   const columns = [

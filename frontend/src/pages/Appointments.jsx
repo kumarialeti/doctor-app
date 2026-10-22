@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { Table, message, Modal, Tabs, Rate, Input as AntInput } from "antd";
 import moment from "moment";
 import { JitsiMeeting } from "@jitsi/react-sdk";
 import { UserContext } from "../components/UserContext";
+import { io } from "socket.io-client";
+import { motion, AnimatePresence } from "framer-motion";
+import { Video, PhoneOff } from "lucide-react";
 
 const Appointments = () => {
   const { user } = useContext(UserContext);
@@ -15,6 +18,10 @@ const Appointments = () => {
   // Telemedicine States
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
+  const socketRef = useRef(null);
+
+  // Incoming Call State
+  const [incomingCall, setIncomingCall] = useState(null); // { fromDoctorName, roomId }
 
   // Review States
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -40,6 +47,36 @@ const Appointments = () => {
   useEffect(() => {
     getAppointments();
   }, []);
+
+  // Initialize Socket for incoming call notifications
+  useEffect(() => {
+    if (user?._id) {
+      const sock = io(import.meta.env.VITE_API_URL, { query: { userId: user._id } });
+      socketRef.current = sock;
+
+      sock.on("incoming-video-call", ({ fromDoctorName, fromDoctorId, roomId }) => {
+        setIncomingCall({ fromDoctorName, fromDoctorId, roomId });
+      });
+
+      return () => sock.close();
+    }
+  }, [user?._id]);
+
+  const handleJoinIncomingCall = () => {
+    if (incomingCall?.roomId) {
+      setActiveRoomId(incomingCall.roomId);
+      setIsVideoCallOpen(true);
+      setIncomingCall(null);
+    }
+  };
+
+  const handleDeclineCall = () => {
+    if (socketRef.current && incomingCall?.fromDoctorId) {
+      socketRef.current.emit("video-call-declined", { toDoctorId: incomingCall.fromDoctorId });
+    }
+    setIncomingCall(null);
+    message.info("You declined the call.");
+  };
 
   const handleCancel = async (record) => {
     try {
@@ -263,6 +300,56 @@ const Appointments = () => {
 
   return (
     <div className="p-8 h-full bg-white rounded-2xl shadow-sm border border-slate-100 relative">
+
+      {/* Incoming Video Call Overlay */}
+      <AnimatePresence>
+        {incomingCall && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ y: 40 }}
+              animate={{ y: 0 }}
+              className="bg-white rounded-3xl p-10 shadow-2xl flex flex-col items-center text-center max-w-sm w-full mx-4"
+            >
+              {/* Pulsing avatar */}
+              <div className="relative mb-6">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl"
+                >
+                  <Video size={40} className="text-white" />
+                </motion.div>
+                <span className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white block animate-pulse" />
+              </div>
+
+              <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest mb-1">Incoming Video Call</p>
+              <h2 className="text-2xl font-black text-slate-800 mb-2">{incomingCall.fromDoctorName}</h2>
+              <p className="text-slate-500 text-sm mb-8">is calling you for your consultation...</p>
+
+              <div className="flex gap-4 w-full">
+                <button
+                  onClick={handleDeclineCall}
+                  className="flex-1 flex items-center justify-center gap-2 bg-red-100 text-red-600 font-bold py-4 rounded-2xl border-none cursor-pointer hover:bg-red-200 transition text-base"
+                >
+                  <PhoneOff size={20} /> Decline
+                </button>
+                <button
+                  onClick={handleJoinIncomingCall}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-2xl border-none cursor-pointer hover:shadow-xl transition text-base shadow-lg"
+                >
+                  <Video size={20} /> Join Call
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <h1 className="text-2xl font-bold mb-6 text-slate-800 border-b pb-4">My Appointments</h1>
       <Tabs
         defaultActiveKey="1"
