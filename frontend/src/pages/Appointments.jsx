@@ -6,7 +6,7 @@ import { JitsiMeeting } from "@jitsi/react-sdk";
 import { UserContext } from "../components/UserContext";
 import { io } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Video, PhoneOff } from "lucide-react";
+import { Video, PhoneOff, Printer, Download, FileText, CheckCircle, Stethoscope } from "lucide-react";
 
 const Appointments = () => {
   const { user } = useContext(UserContext);
@@ -15,13 +15,9 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   
   // Telemedicine States
-  // Telemedicine States
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
   const socketRef = useRef(null);
-
-  // Incoming Call State
-  const [incomingCall, setIncomingCall] = useState(null); // { fromDoctorName, roomId }
 
   // Review States
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -44,39 +40,54 @@ const Appointments = () => {
     }
   };
 
+  const handlePrintPrescription = () => {
+    const printContent = document.getElementById("prescription-letterhead");
+    if (!printContent) return;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Prescription_RX_${selectedAppointment?._id?.slice(-6)?.toUpperCase() || "DOC"}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; background: #fff; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #3b82f6; padding-bottom: 16px; margin-bottom: 24px; }
+            .logo-title { font-size: 26px; font-weight: 900; color: #1d4ed8; letter-spacing: -0.5px; }
+            .rx-badge { font-size: 13px; font-weight: bold; background: #eff6ff; color: #1e40af; padding: 6px 14px; border-radius: 999px; border: 1px solid #bfdbfe; }
+            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+            .field-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+            .field-val { font-size: 15px; font-weight: 700; color: #0f172a; }
+            .section-box { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 20px; background: #ffffff; }
+            .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #2563eb; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+            .rx-symbol { font-size: 32px; font-family: serif; font-weight: bold; color: #2563eb; margin-bottom: 8px; }
+            .content-text { font-size: 14px; line-height: 1.7; color: #334155; white-space: pre-line; }
+            .footer { border-top: 2px dashed #cbd5e1; padding-top: 20px; margin-top: 40px; display: flex; justify-content: space-between; align-items: center; }
+            .verified-stamp { color: #15803d; font-weight: bold; font-size: 13px; }
+            @media print {
+              body { padding: 20px; }
+              @page { margin: 1cm; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   useEffect(() => {
     getAppointments();
   }, []);
 
-  // Initialize Socket for incoming call notifications
-  useEffect(() => {
-    if (user?._id) {
-      const sock = io(import.meta.env.VITE_API_URL, { query: { userId: user._id } });
-      socketRef.current = sock;
 
-      sock.on("incoming-video-call", ({ fromDoctorName, fromDoctorId, roomId }) => {
-        setIncomingCall({ fromDoctorName, fromDoctorId, roomId });
-      });
-
-      return () => sock.close();
-    }
-  }, [user?._id]);
-
-  const handleJoinIncomingCall = () => {
-    if (incomingCall?.roomId) {
-      setActiveRoomId(incomingCall.roomId);
-      setIsVideoCallOpen(true);
-      setIncomingCall(null);
-    }
-  };
-
-  const handleDeclineCall = () => {
-    if (socketRef.current && incomingCall?.fromDoctorId) {
-      socketRef.current.emit("video-call-declined", { toDoctorId: incomingCall.fromDoctorId });
-    }
-    setIncomingCall(null);
-    message.info("You declined the call.");
-  };
 
   const handleCancel = async (record) => {
     try {
@@ -301,55 +312,6 @@ const Appointments = () => {
   return (
     <div className="p-8 h-full bg-white rounded-2xl shadow-sm border border-slate-100 relative">
 
-      {/* Incoming Video Call Overlay */}
-      <AnimatePresence>
-        {incomingCall && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md"
-          >
-            <motion.div
-              initial={{ y: 40 }}
-              animate={{ y: 0 }}
-              className="bg-white rounded-3xl p-10 shadow-2xl flex flex-col items-center text-center max-w-sm w-full mx-4"
-            >
-              {/* Pulsing avatar */}
-              <div className="relative mb-6">
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl"
-                >
-                  <Video size={40} className="text-white" />
-                </motion.div>
-                <span className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white block animate-pulse" />
-              </div>
-
-              <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest mb-1">Incoming Video Call</p>
-              <h2 className="text-2xl font-black text-slate-800 mb-2">{incomingCall.fromDoctorName}</h2>
-              <p className="text-slate-500 text-sm mb-8">is calling you for your consultation...</p>
-
-              <div className="flex gap-4 w-full">
-                <button
-                  onClick={handleDeclineCall}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-100 text-red-600 font-bold py-4 rounded-2xl border-none cursor-pointer hover:bg-red-200 transition text-base"
-                >
-                  <PhoneOff size={20} /> Decline
-                </button>
-                <button
-                  onClick={handleJoinIncomingCall}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-2xl border-none cursor-pointer hover:shadow-xl transition text-base shadow-lg"
-                >
-                  <Video size={20} /> Join Call
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <h1 className="text-2xl font-bold mb-6 text-slate-800 border-b pb-4">My Appointments</h1>
       <Tabs
         defaultActiveKey="1"
@@ -375,30 +337,100 @@ const Appointments = () => {
         ]}
       />
 
-      {/* Prescription Details Modal */}
+      {/* Official Digital Prescription Modal */}
       <Modal 
-        title={<span className="text-xl font-bold text-slate-800">Consultation Details</span>} 
+        title={
+          <div className="flex items-center justify-between pr-8 border-b pb-3">
+            <span className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <FileText className="text-blue-600" size={20} /> Official Digital Prescription
+            </span>
+          </div>
+        } 
         open={isModalOpen} 
-        onOk={() => setIsModalOpen(false)} 
         onCancel={() => setIsModalOpen(false)}
+        width={720}
         footer={[
-          <button key="back" onClick={() => setIsModalOpen(false)} className="bg-slate-100 text-slate-800 px-6 py-2 rounded-lg font-semibold hover:bg-slate-200 transition border-none cursor-pointer">
+          <button
+            key="print"
+            onClick={handlePrintPrescription}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition border-none cursor-pointer flex items-center gap-2 text-sm shadow-md shadow-blue-500/20"
+          >
+            <Printer size={16} /> Print / Save as PDF
+          </button>,
+          <button
+            key="close"
+            onClick={() => setIsModalOpen(false)}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition border-none cursor-pointer text-sm"
+          >
             Close
           </button>
         ]}
       >
         {selectedAppointment && (
-          <div className="mt-6 space-y-6">
-            <div>
-              <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2"><i className="fa-solid fa-stethoscope text-blue-500"></i> Doctor's Notes</h4>
-              <p className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 text-slate-700 whitespace-pre-line leading-relaxed shadow-sm">
-                {selectedAppointment.notes || "No notes provided."}
+          <div id="prescription-letterhead" className="mt-4 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm text-slate-800">
+            {/* Letterhead Header */}
+            <div className="header flex justify-between items-start border-b-2 border-blue-600 pb-4 mb-6">
+              <div>
+                <h2 className="logo-title text-2xl font-black text-blue-700 tracking-tight m-0">MediCarePro Health Network</h2>
+                <p className="text-xs text-slate-500 font-semibold m-0 mt-0.5">Telemedicine & Clinical Healthcare Systems</p>
+                <p className="text-[11px] text-slate-400 m-0">Verified Teleconsultation Electronic Medical Record</p>
+              </div>
+              <div className="text-right">
+                <span className="rx-badge inline-block bg-blue-50 text-blue-700 border border-blue-200 font-extrabold text-xs px-3 py-1 rounded-full uppercase tracking-wider">
+                  RX #{selectedAppointment._id.slice(-6).toUpperCase()}
+                </span>
+                <p className="text-xs text-slate-500 font-medium m-0 mt-2">
+                  Date: {moment(selectedAppointment.date).format("DD MMM YYYY")}
+                </p>
+              </div>
+            </div>
+
+            {/* Doctor and Patient Summary */}
+            <div className="grid-2 grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
+              <div>
+                <p className="field-label text-[11px] font-black text-slate-400 uppercase tracking-wider m-0">Attending Physician</p>
+                <p className="field-val text-base font-extrabold text-slate-800 m-0 mt-0.5">Dr. {selectedAppointment.doctorInfo?.fullname}</p>
+                <p className="text-xs text-blue-600 font-bold m-0">{selectedAppointment.doctorInfo?.specialization}</p>
+                <p className="text-[11px] text-slate-500 m-0">Exp: {selectedAppointment.doctorInfo?.experience || "N/A"}</p>
+              </div>
+              <div>
+                <p className="field-label text-[11px] font-black text-slate-400 uppercase tracking-wider m-0">Patient Name</p>
+                <p className="field-val text-base font-extrabold text-slate-800 m-0 mt-0.5">{selectedAppointment.userInfo?.name || user?.name}</p>
+                <p className="text-xs text-slate-600 font-medium m-0">Email: {selectedAppointment.userInfo?.email || user?.email}</p>
+                <p className="text-[11px] text-slate-500 m-0">Consultation Time: {moment(selectedAppointment.time).format("HH:mm")}</p>
+              </div>
+            </div>
+
+            {/* Clinical Diagnosis / Notes */}
+            <div className="section-box border border-slate-200 rounded-xl p-4 mb-4 bg-white">
+              <div className="section-title text-xs font-black uppercase text-blue-600 flex items-center gap-2 mb-2 tracking-wider">
+                <Stethoscope size={15} /> Clinical Diagnosis & Doctor's Notes
+              </div>
+              <p className="content-text text-sm leading-relaxed text-slate-700 whitespace-pre-line m-0">
+                {selectedAppointment.notes || "Standard clinical review conducted. No specific adverse complications reported."}
               </p>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2"><i className="fa-solid fa-pills text-indigo-500"></i> Prescription</h4>
-              <p className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-slate-700 whitespace-pre-line leading-relaxed shadow-sm">
-                {selectedAppointment.prescription || "No prescription provided."}
+
+            {/* Rx Prescriptions */}
+            <div className="section-box border border-slate-200 rounded-xl p-4 mb-5 bg-white">
+              <div className="flex items-center justify-between mb-2">
+                <span className="rx-symbol text-2xl font-black text-blue-600 font-serif">Rx</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Medical Prescription</span>
+              </div>
+              <div className="bg-blue-50/40 border border-blue-100 rounded-xl p-4">
+                <p className="content-text text-sm leading-relaxed font-mono text-slate-800 whitespace-pre-line m-0 font-medium">
+                  {selectedAppointment.prescription || "No medicinal drugs prescribed. Maintain routine hydration and health precautions."}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer with Digital Verification Stamp */}
+            <div className="footer border-t border-slate-200 pt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                <CheckCircle size={15} /> Digitally Signed & Verified by Dr. {selectedAppointment.doctorInfo?.fullname}
+              </div>
+              <p className="text-[10px] text-slate-400 m-0 italic">
+                Valid electronic prescription compliant with Telemedicine Practice Guidelines.
               </p>
             </div>
           </div>

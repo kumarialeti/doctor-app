@@ -6,6 +6,8 @@ import moment from "moment";
 import { JitsiMeeting } from "@jitsi/react-sdk";
 import { UserContext } from "../components/UserContext";
 import { io } from "socket.io-client";
+import { motion, AnimatePresence } from "framer-motion";
+import { Video, PhoneOff, Radio, UserCheck, ArrowRight } from "lucide-react";
 
 const { TextArea } = Input;
 
@@ -21,6 +23,7 @@ const DoctorAppointments = () => {
   // Telemedicine States
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
+  const [callingState, setCallingState] = useState(null); // { patientName, roomId, status: 'calling' | 'declined' }
   const socketRef = useRef(null);
 
   // Initialize Socket for call signalling
@@ -30,7 +33,11 @@ const DoctorAppointments = () => {
       socketRef.current = sock;
 
       sock.on("call-was-declined", () => {
+        setCallingState(prev => prev ? { ...prev, status: "declined" } : null);
         message.warning("Patient declined the video call.");
+        setTimeout(() => {
+          setCallingState(null);
+        }, 2500);
       });
 
       return () => sock.close();
@@ -113,7 +120,13 @@ const DoctorAppointments = () => {
   const startVideoCall = (record) => {
     const roomId = `medicare-consult-${record._id}`;
     setActiveRoomId(roomId);
-    setIsVideoCallOpen(true);
+    
+    // Open doctor radar calling overlay
+    setCallingState({
+      patientName: record.userInfo?.name || "Patient",
+      roomId,
+      status: "calling"
+    });
 
     // Notify patient via socket
     if (socketRef.current && record.userId) {
@@ -349,6 +362,75 @@ const DoctorAppointments = () => {
           />
         )}
       </Modal>
+
+      {/* Doctor Calling Radar Overlay */}
+      <AnimatePresence>
+        {callingState && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.85, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-indigo-100 flex flex-col items-center relative overflow-hidden"
+            >
+              {/* Sonar Radar Pulses */}
+              <div className="relative mb-6">
+                {callingState.status === "calling" ? (
+                  <>
+                    <div className="absolute inset-0 rounded-full bg-violet-500/20 animate-ping" />
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-xl relative z-10">
+                      <Radio size={40} className="animate-spin text-white" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center text-red-600 shadow-xl relative z-10">
+                    <PhoneOff size={40} />
+                  </div>
+                )}
+              </div>
+
+              <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2 ${
+                callingState.status === "calling" ? "bg-violet-50 text-violet-700" : "bg-red-50 text-red-700"
+              }`}>
+                {callingState.status === "calling" ? "Calling Patient..." : "Call Declined"}
+              </span>
+
+              <h3 className="text-2xl font-black text-slate-800 m-0 mb-1">{callingState.patientName}</h3>
+              <p className="text-xs text-slate-500 font-medium m-0 mb-6">
+                {callingState.status === "calling"
+                  ? "Ringing patient's screen... Waiting for patient to join consultation."
+                  : "Patient declined the video consultation invitation."}
+              </p>
+
+              <div className="flex flex-col gap-2.5 w-full">
+                {callingState.status === "calling" && (
+                  <button
+                    onClick={() => {
+                      setIsVideoCallOpen(true);
+                      setCallingState(null);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-2xl border-none cursor-pointer text-sm transition shadow-lg shadow-indigo-500/20"
+                  >
+                    <Video size={18} /> Enter Room Now <ArrowRight size={14} />
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setCallingState(null)}
+                  className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl border-none cursor-pointer text-xs transition"
+                >
+                  <PhoneOff size={15} /> {callingState.status === "calling" ? "Cancel Call" : "Close"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

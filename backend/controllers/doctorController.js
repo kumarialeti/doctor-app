@@ -35,6 +35,9 @@ export const updateProfile = async (req, res) => {
 export const getDoctorById = async (req, res) => {
   try {
     const doctor = await Doctor.findOne({ _id: req.body.doctorId }).lean();
+    if (!doctor) {
+      return res.status(404).send({ success: false, message: "Doctor not found" });
+    }
     
     // Fetch reviews
     const reviews = await Review.find({ doctorId: doctor._id }).sort({ createdAt: -1 });

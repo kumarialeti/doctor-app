@@ -1,16 +1,62 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import { UserContext } from "./UserContext";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { LogOut, Bell, Settings } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogOut, Bell, Settings, Video, PhoneOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { io } from "socket.io-client";
+import { Modal, message } from "antd";
+import { JitsiMeeting } from "@jitsi/react-sdk";
+import { playRingtone, stopRingtone } from "../utils/ringtone";
 
 const Layout = ({ children }) => {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  // Global Video Call State
+  const [incomingCall, setIncomingCall] = useState(null); // { fromDoctorName, fromDoctorId, roomId }
+  const [isGlobalVideoOpen, setIsGlobalVideoOpen] = useState(false);
+  const [activeRoomId, setActiveRoomId] = useState("");
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (user?._id) {
+      const sock = io(import.meta.env.VITE_API_URL, { query: { userId: user._id } });
+      socketRef.current = sock;
+
+      sock.on("incoming-video-call", ({ fromDoctorName, fromDoctorId, roomId }) => {
+        setIncomingCall({ fromDoctorName, fromDoctorId, roomId });
+        playRingtone();
+      });
+
+      return () => {
+        stopRingtone();
+        sock.close();
+      };
+    }
+  }, [user?._id]);
+
+  const handleJoinCall = () => {
+    stopRingtone();
+    if (incomingCall?.roomId) {
+      setActiveRoomId(incomingCall.roomId);
+      setIsGlobalVideoOpen(true);
+      setIncomingCall(null);
+    }
+  };
+
+  const handleDeclineCall = () => {
+    stopRingtone();
+    if (socketRef.current && incomingCall?.fromDoctorId) {
+      socketRef.current.emit("video-call-declined", { toDoctorId: incomingCall.fromDoctorId });
+    }
+    setIncomingCall(null);
+    message.info("You declined the video call.");
+  };
+
   const handleLogout = () => {
+    stopRingtone();
     localStorage.clear();
     window.location.reload();
   };
@@ -149,6 +195,89 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </motion.div>
+
+      {/* Global Incoming Video Call Overlay */}
+      <AnimatePresence>
+        {incomingCall && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.85, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-indigo-100 flex flex-col items-center relative overflow-hidden"
+            >
+              {/* Pulsing Sonar Ring Visual */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
+                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl relative z-10">
+                  <Video size={42} className="animate-pulse" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white block animate-pulse" />
+              </div>
+
+              <span className="bg-indigo-50 text-indigo-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2">
+                Incoming Consultation Call
+              </span>
+              <h3 className="text-2xl font-black text-slate-800 m-0 mb-1">{incomingCall.fromDoctorName}</h3>
+              <p className="text-xs text-slate-500 font-medium m-0 mb-6">
+                is calling you for your telemedicine consultation...
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={handleDeclineCall}
+                  className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3.5 rounded-2xl border-none cursor-pointer text-sm transition"
+                >
+                  <PhoneOff size={18} /> Decline
+                </button>
+                <button
+                  onClick={handleJoinCall}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 rounded-2xl border-none cursor-pointer text-sm transition shadow-lg shadow-emerald-500/25"
+                >
+                  <Video size={18} /> Join Call
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Telemedicine Video Call Modal */}
+      <Modal
+        title={<span className="text-xl font-bold text-slate-800"><i className="fa-solid fa-video text-green-500 mr-2"></i> MediCare Telemedicine Portal</span>}
+        open={isGlobalVideoOpen}
+        onCancel={() => setIsGlobalVideoOpen(false)}
+        footer={null}
+        width={1000}
+        destroyOnClose
+        centered
+        styles={{ body: { height: '70vh', padding: 0, background: '#1e293b', overflow: 'hidden' } }}
+      >
+        {isGlobalVideoOpen && (
+          <JitsiMeeting
+            domain="meet.jit.si"
+            roomName={activeRoomId}
+            configOverwrite={{
+              startWithAudioMuted: false,
+              startWithVideoMuted: false,
+              disableModeratorIndicator: true,
+              enableEmailInStats: false
+            }}
+            interfaceConfigOverwrite={{
+              DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
+            }}
+            userInfo={{
+              displayName: user?.name || "Patient"
+            }}
+            getIFrameRef={(iframeRef) => { iframeRef.style.height = '100%'; }}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

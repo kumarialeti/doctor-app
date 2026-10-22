@@ -7,13 +7,18 @@ import moment from "moment";
 import {
   CalendarDays, Users, CheckCircle2, Clock,
   ArrowRight, Activity, Stethoscope, MessageSquare,
-  Video, TrendingUp, IndianRupee, UserCheck,
+  Video, TrendingUp, IndianRupee, UserCheck, BarChart3,
 } from "lucide-react";
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
+} from "recharts";
 
 const DoctorDashboard = () => {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
+  const [chartMetric, setChartMetric] = useState("patients"); // "patients" | "revenue"
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,11 +38,33 @@ const DoctorDashboard = () => {
     (a) => moment(a.date).format("YYYY-MM-DD") === moment().format("YYYY-MM-DD") && a.status !== "cancelled" && a.status !== "rejected"
   );
 
+  const totalRevenue = completed.reduce((sum, a) => sum + (Number(a.doctorInfo?.fees) || 500), 0);
+
+  // Generate 7-day analytical trend
+  const chartData = [6, 5, 4, 3, 2, 1, 0].map((daysAgo) => {
+    const dayMoment = moment().subtract(daysAgo, "days");
+    const dateStr = dayMoment.format("YYYY-MM-DD");
+    const dayLabel = dayMoment.format("ddd, DD");
+    
+    const dayAppts = appointments.filter(
+      (a) => moment(a.date).format("YYYY-MM-DD") === dateStr
+    );
+    const dayRevenue = dayAppts
+      .filter((a) => a.status === "completed" || a.paymentStatus === "paid")
+      .reduce((sum, a) => sum + (Number(a.doctorInfo?.fees) || 500), 0);
+
+    return {
+      day: dayLabel,
+      patients: dayAppts.length,
+      revenue: dayRevenue,
+    };
+  });
+
   const stats = [
     { label: "Total Patients", value: appointments.length, icon: Users, bg: "bg-violet-50", text: "text-violet-600" },
     { label: "Pending Requests", value: pending.length, icon: Clock, bg: "bg-amber-50", text: "text-amber-600" },
-    { label: "Active Appointments", value: approved.length, icon: UserCheck, bg: "bg-blue-50", text: "text-blue-600" },
-    { label: "Completed", value: completed.length, icon: CheckCircle2, bg: "bg-emerald-50", text: "text-emerald-600" },
+    { label: "Completed Visits", value: completed.length, icon: CheckCircle2, bg: "bg-emerald-50", text: "text-emerald-600" },
+    { label: "Estimated Revenue", value: `₹${totalRevenue}`, icon: IndianRupee, bg: "bg-blue-50", text: "text-blue-600" },
   ];
 
   const quickActions = [
@@ -87,6 +114,85 @@ const DoctorDashboard = () => {
             <p className="text-xs font-semibold text-slate-500 mt-1 m-0">{s.label}</p>
           </motion.div>
         ))}
+      </motion.div>
+
+      {/* Interactive Practice Analytics Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100"
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-lg font-black text-slate-800 m-0 flex items-center gap-2">
+              <TrendingUp size={20} className="text-violet-600" />
+              Practice Performance & 7-Day Trend
+            </h2>
+            <p className="text-xs text-slate-500 font-medium m-0 mt-0.5">
+              Live consultation volume & estimated revenue analytics.
+            </p>
+          </div>
+
+          {/* Metric Toggle Buttons */}
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+            <button
+              onClick={() => setChartMetric("patients")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border-none cursor-pointer flex items-center gap-1.5 ${
+                chartMetric === "patients"
+                  ? "bg-white text-violet-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 bg-transparent"
+              }`}
+            >
+              <Users size={13} /> Patient Consultations
+            </button>
+            <button
+              onClick={() => setChartMetric("revenue")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border-none cursor-pointer flex items-center gap-1.5 ${
+                chartMetric === "revenue"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 bg-transparent"
+              }`}
+            >
+              <IndianRupee size={13} /> Revenue Flow (₹)
+            </button>
+          </div>
+        </div>
+
+        {/* Recharts Area / Bar Chart */}
+        <div className="w-full h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartMetric === "patients" ? (
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="patientGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#1e1b4b", borderRadius: "12px", border: "none", color: "#fff" }}
+                  formatter={(val) => [`${val} Patients`, "Consultations"]}
+                />
+                <Area type="monotone" dataKey="patients" stroke="#7c3aed" strokeWidth={3} fillOpacity={1} fill="url(#patientGrad)" />
+              </AreaChart>
+            ) : (
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `₹${val}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#064e3b", borderRadius: "12px", border: "none", color: "#fff" }}
+                  formatter={(val) => [`₹${val}`, "Revenue"]}
+                />
+                <Bar dataKey="revenue" fill="#10b981" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
       </motion.div>
 
       {/* Body Grid */}
