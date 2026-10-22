@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CalendarCheck, ShieldCheck, Video, ArrowRight } from "lucide-react";
+import { CalendarCheck, ShieldCheck, Video, ArrowRight, Award, Star } from "lucide-react";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -120,18 +120,45 @@ const Landing = () => {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="w-full lg:w-1/2 flex justify-center items-center relative"
         >
-          {/* Glass Card Floating Element */}
+          {/* Glass Card Floating Element - Top Rated */}
           <motion.div 
-            animate={{ y: [-10, 10, -10] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-10 right-0 lg:-right-10 z-20 backdrop-blur-xl bg-white/60 p-4 rounded-2xl shadow-2xl border border-white/50 flex items-center gap-4"
+            animate={{ y: [-8, 8, -8] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-8 right-0 lg:-right-8 z-20 backdrop-blur-xl bg-white/85 p-4 rounded-2xl shadow-2xl border border-white/60 flex items-center gap-3.5"
           >
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <Video size={24} />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+              <Award size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800 m-0">Call Started</p>
-              <p className="text-xs text-slate-500 font-medium m-0">Dr. Sarah is waiting...</p>
+              <p className="text-sm font-black text-slate-800 m-0">Top Rated Doctors</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex text-amber-400">
+                  <Star size={13} className="fill-amber-400" />
+                  <Star size={13} className="fill-amber-400" />
+                  <Star size={13} className="fill-amber-400" />
+                  <Star size={13} className="fill-amber-400" />
+                  <Star size={13} className="fill-amber-400" />
+                </div>
+                <span className="text-xs text-slate-500 font-bold ml-1">4.9 (10k+ Reviews)</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Bottom Floating Glass Card - Certified Care */}
+          <motion.div 
+            animate={{ y: [8, -8, 8] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-6 -left-4 lg:-left-8 z-20 backdrop-blur-xl bg-white/85 p-3.5 px-5 rounded-2xl shadow-2xl border border-white/60 flex items-center gap-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-800 m-0">100% Certified Care</p>
+              <p className="text-[11px] text-emerald-600 font-semibold m-0 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                Instant Appointments
+              </p>
             </div>
           </motion.div>
 
